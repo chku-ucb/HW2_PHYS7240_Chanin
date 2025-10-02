@@ -24,3 +24,9 @@ julia find_susceptibility.jl
 
 # Output
 The simulation will generate output files in the `results` directory, including plots and data files for analysis.
+
+# Information for each file
+- `functions.jl`: Contains utility functions for the simulation, including index mapping and correlation calculations
+- `find_susceptibility.jl`: Main script to run the susceptibility simulation
+- `correlations_simulation.jl`: Script to analyze and plot correlation functions from the simulation
+- `validation_MandE.jl`: Script to validate magnetization and energy calculations against known results
