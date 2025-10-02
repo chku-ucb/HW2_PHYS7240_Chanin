@@ -120,15 +120,15 @@ end
 function magnetic_susceptibility(Ms::Vector{Float64}, N::Int)
     mean_M = mean(abs.(Ms))
     mean_M2 = mean(Ms .^ 2)
-    chi = (mean_M2 - mean_M^2)
+    chi = N*(mean_M2 - mean_M^2)
     return chi
 end
 
 # Function to compute the Specific Heat
-function specific_heat(Es::Vector{Float64}, K::Float64)
+function specific_heat(Es::Vector{Float64}, N::Int)
     mean_E = mean(Es)
     mean_E2 = mean(Es .^ 2)
-    C = K^2 * (mean_E2 - mean_E^2)
+    C = N*(mean_E2 - mean_E^2)
     return C
 end
 

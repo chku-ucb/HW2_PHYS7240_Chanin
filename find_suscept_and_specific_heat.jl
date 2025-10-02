@@ -30,7 +30,7 @@ function find_suscept_and_specific_heat(L::Int, K::Float64; Tstep::Int=10000, eq
     Ms = Ms[equil_steps+1:end][:]
 
     suscept = magnetic_susceptibility(Ms, N)
-    specific_heat_K = specific_heat(Es, K)
+    specific_heat_K = specific_heat(Es, N)
 
     return specific_heat_K, suscept
 end
