@@ -5,7 +5,7 @@ env_dir = joinpath(script_dir, "env")
 
 using Pkg
 Pkg.activate(env_dir)
-using LinearAlgebra, Statistics, Random, Plots
+using LinearAlgebra, Statistics, Random, Plots, FFTW
 
 # Map (x,y) to linear index with periodic BC
 @inline idx(x::Int, y::Int, L::Int) = 1 + mod(x-1, L) + L * mod(y-1, L)
@@ -132,38 +132,45 @@ function specific_heat(Es::Vector{Float64}, K::Float64)
     return C
 end
 
-# Function to find Collrelation Function
-function correlation_function(spins::Vector{Int8}, L::Int)
-    max_dist = div(L, 2) # Maximum distance to consider
-    corr = zeros(Float64, max_dist) # Correlation values
-    counts = zeros(Int, max_dist) # Count of pairs for normalization
-    N = L * L # Total number of spins 
-    for y1 in 1:L, x1 in 1:L
-        i = idx(x1, y1, L) # Linear index
-        s1 = spins[i] # Spin at (x1, y1)
-        @inbounds for d in 1:max_dist
-            # Horizontal neighbor
-            x2 = mod(x1 - 1 + d, L) + 1 # Wrap around using periodic BC
-            y2 = y1
-            j = idx(x2, y2, L)
-            s2 = spins[j]
-            corr[d] += s1 * s2
-            counts[d] += 1
-
-            # Vertical neighbor
-            x2 = x1
-            y2 = mod(y1 - 1 + d, L) + 1
-            j = idx(x2, y2, L)
-            s2 = spins[j]
-            corr[d] += s1 * s2
-            counts[d] += 1
-        end
+# Function to find two-point Correlation function
+function two_point_correlation(spins::Vector{Int8}, L::Int)
+    s = reshape(spins, L, L)
+    C = zeros(Float64, L)
+    for t in 0:L-1
+        row0 = s[:, 1]
+        rowt = s[:, mod(t,L)+1]
+        C[t+1] = sum(row0 .* rowt) / L^2
     end
-    # Normalize
-    for d in 1:max_dist
-        if counts[d] > 0
-            corr[d] /= counts[d]
-        end
-    end
-    return corr
+    return C
 end
+
+"""
+m_eff(r) = arccosh((C(r+1) + C(r-1)) / (2 * C(r)))
+"""
+# Function to compute the Effective Mass
+# C is length L with C[1]=r=0, C[2]=r=1, ..., C[L]=r=L-1
+function meff_cosh(C::AbstractVector{<:Real})
+    L = length(C)
+    me = fill(NaN, L)  # we'll fill entries for r=2:(L-1)
+    @inbounds for r in 2:(L-1)
+        den = 2*C[r]
+        if den == 0
+            continue
+        end
+        x = (C[r+1] + C[r-1]) / den
+        # numerical safety: x should be ≥ 1; allow tiny deficit
+        if x >= 1 - 1e-12
+            me[r] = acosh(max(x, 1.0))
+        end
+    end
+    return me
+end
+
+# Function to find xi at K in the plateau region of C(t)
+function xi_plateau(C::AbstractVector{<:Real}, rmin::Int, rmax::Int)
+    L = length(C)
+    @assert 1 <= rmin < rmax <= div(L,2)
+    plateau = C[rmin:rmax]
+    return mean(plateau)
+end
+
