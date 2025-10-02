@@ -95,22 +95,33 @@ function main()
         savefig(p, joinpath(script_dir, "results/correlations/m_eff_L$(L).pdf"))
     end
 
-    # Plot xi(t) vs t for each L and K
+    # Plot xi(K) vs K for each L and compare to |K-Kc|^-1
     for (i, L) in pairs(L_values)
-        p = plot(title= "Correlation Length Estimate (ξ) for L=$L",
-                xlabel="K", ylabel="ξ(r)", dpi=250)
-        corrs = results[L]      # assume this is a Vector of connected C(r) for each K, length L
+        p = plot(title="Correlation Length Estimate (ξ) for L=$L",
+                 xlabel="K", ylabel="ξ(K)", dpi=250)
+        corrs = results[L]
         rmin = 2
-        rmax = floor(Int, L ÷ 2)           # avoid wrap-around region
+        rmax = floor(Int, L ÷ 2)
         xis = Float64[]
+        N = L * L
 
         for (j, K) in pairs(K_values)
-            C = corrs[j]                   # length L, C[1]=r=0, C[2]=r=1, ...
-            xi = xi_plateau(C, rmin, rmax) # single number
-            
+            C = corrs[j]
+            xi = xi_plateau(C, rmin, rmax)
             push!(xis, xi)
         end
-        plot!(p, K_values, xis, label="L=$L", lw=1.5)
+        
+        plot!(p, K_values, xis, label="ξ(K) (L=$L)", lw=2)
+
+        # Plot |K-Kc|^-1 for K < Kc and near Kc
+        delta = 0.1 * Kc  # range near Kc to show asymptotic behavior
+        asymp_Ks = [K for K in K_values if (K < Kc) && (Kc - K < delta) && (abs(K - Kc) > 1e-3)]
+        asymp_xi = [abs(K - Kc)^(-1) for K in asymp_Ks]
+        # Scale for visibility using max(xis) in this region
+        scale = maximum(xis)
+        asymp_xi_scaled = scale * asymp_xi ./ maximum(asymp_xi)
+        plot!(p, asymp_Ks, asymp_xi_scaled, label="scaled |K-Kc|⁻¹ (K < Kc, near Kc)", lw=1.5, linestyle=:dash, color=:black)
+
         savefig(p, joinpath(script_dir, "results/correlations/xi_L$(L).pdf"))
     end
 
