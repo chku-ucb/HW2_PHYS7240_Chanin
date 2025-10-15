@@ -5,7 +5,7 @@ env_dir = joinpath(script_dir, "env")
 
 using Pkg
 Pkg.activate(env_dir)
-using LinearAlgebra, Statistics, Random, Plots, FFTW
+using LinearAlgebra, Statistics, Random, Plots, FFTW, GLM, DataFrames
 
 # Map (x,y) to linear index with periodic BC
 @inline idx(x::Int, y::Int, L::Int) = 1 + mod(x-1, L) + L * mod(y-1, L)
@@ -166,11 +166,29 @@ function meff_cosh(C::AbstractVector{<:Real})
     return me
 end
 
-# Function to find xi at K in the plateau region of C(t)
-function xi_plateau(C::AbstractVector{<:Real}, rmin::Int, rmax::Int)
+# Function to compute the correlation length from fitting the correlation curve
+function xi_find(C::AbstractVector{<:Real}, rmin::Int, rmax::Int)
     L = length(C)
-    @assert 1 <= rmin < rmax <= div(L,2)
-    plateau = C[rmin:rmax]
-    return mean(plateau)
+    @assert 1 <= rmin < rmax <= L
+
+    # Take absolute value to avoid negative correlations due to noise
+    r_vals = collect(rmin:rmax)
+    C_slice = abs.(C[rmin:rmax])
+
+    # Avoid zero or negative values before taking log
+    keep = (C_slice .> 0)
+    r_vals = r_vals[keep]
+    C_slice = C_slice[keep]
+
+    # Fit log(C) = log(A) - r/ξ
+    y = log.(C_slice)
+    df = DataFrame(r = r_vals, logC = y)
+    model = lm(@formula(logC ~ r), df)
+
+    intercept, slope = coef(model)
+    A = exp(intercept)
+    xi = -1 / slope  # slope = -1/ξ
+
+    return xi, A, model
 end
 

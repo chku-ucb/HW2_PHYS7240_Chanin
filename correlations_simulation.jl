@@ -101,13 +101,13 @@ function main()
                  xlabel="K", ylabel="ξ(K)", dpi=250)
         corrs = results[L]
         rmin = 2
-        rmax = floor(Int, L ÷ 2)
+        rmax = floor(Int, L ÷ 3)
         xis = Float64[]
         N = L * L
 
         for (j, K) in pairs(K_values)
             C = corrs[j]
-            xi = xi_plateau(C, rmin, rmax)
+            xi, A, model = xi_find(C, rmin, rmax)
             push!(xis, xi)
         end
         
